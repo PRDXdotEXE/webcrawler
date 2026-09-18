@@ -1,3 +1,4 @@
+import { get } from "https";
 import { JSDOM } from "jsdom";
 
 type ExtractedPageData = {
@@ -7,6 +8,28 @@ type ExtractedPageData = {
     outgoingLinks: string[];
     imageURLs: string[];
 };
+
+export async function getHTML(url: string) {
+    const response = await fetch(url, {
+        headers: {
+            "User-Agent": "BootCrawler/1.0",
+        },
+    });
+
+    if (!response.ok) {
+        console.log(`Request failed: ${response.status}`);
+        return;
+    }
+
+    const contentType = response.headers.get("content-type");
+
+    if (!contentType?.includes("text/html")) {
+        console.log("Response is not HTML");
+        return;
+    }
+
+    return await response.text();
+}
 
 export function normalizeURL(url: string): string {
     const myURL = new URL(url);
@@ -29,7 +52,7 @@ export function getHeadingFromHTML(html: string): string {
     }
 }
 
-export function getFirstParagraphFromHTL(html: string): string {
+export function getFirstParagraphFromHTML(html: string): string {
     const document = new JSDOM(html).window.document;
     const paragraph = document.querySelector("p");
     if (!paragraph) {
@@ -59,7 +82,7 @@ export function extractPageData(
 ): ExtractedPageData {
     const url = pageURL;
     const heading = getHeadingFromHTML(html);
-    const firstParagraph = getFirstParagraphFromHTL(html);
+    const firstParagraph = getFirstParagraphFromHTML(html);
     const outgoingLinks: string[] = getURLsFromHTML(html, url);
     const imageURLs: string[] = getImagesFromHTML(html, url);
 
@@ -70,4 +93,31 @@ export function extractPageData(
         outgoingLinks,
         imageURLs,
     };
+}
+
+export async function crawlPage(
+    baseURL: string,
+    currentURL: string = baseURL,
+    pages: Record<string, number> = {},
+) {
+    const url = new URL(baseURL);
+    const crntURL = new URL(currentURL);
+    if (url.hostname !== crntURL.hostname) {
+        return pages;
+    }
+    const normalURL = normalizeURL(currentURL);
+    if (normalURL in pages) {
+        pages[normalURL] = pages[normalURL] + 1;
+        return pages;
+    }
+    pages[normalURL] = 1;
+    console.log(`crawling ${currentURL}`);
+
+    const html = await getHTML(currentURL);
+
+    const urls = getURLsFromHTML(html as string, baseURL);
+    for (const url of urls) {
+        crawlPage(baseURL, url, pages);
+    }
+    return pages;
 }

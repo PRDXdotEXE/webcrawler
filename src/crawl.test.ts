@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import {
     extractPageData,
-    getFirstParagraphFromHTL,
+    getFirstParagraphFromHTML,
     getHeadingFromHTML,
     getImagesFromHTML,
     getURLsFromHTML,
@@ -80,7 +80,7 @@ test("getMainParagraph", () => {
             <p>Main paragraph.</p>
           </main>
         </body></html`;
-    const actual = getFirstParagraphFromHTL(inputBody);
+    const actual = getFirstParagraphFromHTML(inputBody);
     const expected = "Outside paragraph.";
     expect(actual).toEqual(expected);
 });
@@ -92,7 +92,7 @@ test("getMainParagraph", () => {
 
           </main>
         </body></html`;
-    const actual = getFirstParagraphFromHTL(inputBody);
+    const actual = getFirstParagraphFromHTML(inputBody);
     const expected = "no paragraph or null paragraph";
     expect(actual).toEqual(expected);
 });
@@ -154,7 +154,7 @@ test("getFirstParagraphFromHTL returns first paragraph", () => {
         </html>
     `;
 
-    const actual = getFirstParagraphFromHTL(inputBody);
+    const actual = getFirstParagraphFromHTML(inputBody);
     const expected = "First paragraph.";
 
     expect(actual).toEqual(expected);
@@ -171,7 +171,7 @@ test("getFirstParagraphFromHTL handles paragraph inside main", () => {
         </html>
     `;
 
-    const actual = getFirstParagraphFromHTL(inputBody);
+    const actual = getFirstParagraphFromHTML(inputBody);
     const expected = "Main paragraph.";
 
     expect(actual).toEqual(expected);
