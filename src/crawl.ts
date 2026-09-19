@@ -1,6 +1,12 @@
 import { JSDOM } from "jsdom";
 import pLimit from "p-limit";
-import { vi } from "vitest";
+export type ExtractedPageData = {
+    url: string;
+    heading: string;
+    first_paragraph: string;
+    outgoing_links: string[];
+    image_urls: string[];
+};
 
 export function normalizeURL(url: string) {
     const urlObj = new URL(url);
@@ -83,14 +89,6 @@ export function getImagesFromHTML(html: string, baseURL: string): string[] {
     return imageURLs;
 }
 
-export type ExtractedPageData = {
-    url: string;
-    heading: string;
-    first_paragraph: string;
-    outgoing_links: string[];
-    image_urls: string[];
-};
-
 export function extractPageData(
     html: string,
     pageURL: string,
@@ -106,7 +104,7 @@ export function extractPageData(
 
 class ConcurrentCrawler {
     private baseURL: string;
-    private pages: Record<string, number>;
+    pages: Record<string, ExtractedPageData>;
     private limit: <T>(fn: () => Promise<T>) => Promise<T>;
     private maxPages: number;
     private shouldStop: boolean;
@@ -128,7 +126,6 @@ class ConcurrentCrawler {
             return false;
         }
         if (this.visited.has(normalizedURL)) {
-            this.pages[normalizedURL]++;
             return false;
         }
         if (this.visited.size >= this.maxPages) {
@@ -138,7 +135,6 @@ class ConcurrentCrawler {
         }
 
         this.visited.add(normalizedURL);
-        this.pages[normalizedURL] = 1;
 
         return true;
     }
@@ -194,16 +190,20 @@ class ConcurrentCrawler {
             return;
         }
 
-        const nextURLs = getURLsFromHTML(html, currentURL);
+        const data = extractPageData(html, currentURL);
+        if (!data) {
+            throw new Error("no data ");
+        }
+        this.pages[normalizedURL] = data;
 
-        const crawlPromises = nextURLs.map((nextURL) =>
+        const crawlPromises = data.outgoing_links.map((nextURL) =>
             this.crawlPage(nextURL),
         );
 
         await Promise.all(crawlPromises);
     }
 
-    async crawl(): Promise<Record<string, number>> {
+    async crawl(): Promise<Record<string, ExtractedPageData>> {
         const task = this.crawlPage(this.baseURL);
         this.allTasks.add(task);
         task.finally(() => {
@@ -218,7 +218,7 @@ export async function crawlSiteAsync(
     baseURL: string,
     maxConcurrency: number,
     maxPages: number,
-): Promise<Record<string, number>> {
+): Promise<Record<string, ExtractedPageData>> {
     const crawler = new ConcurrentCrawler(baseURL, maxConcurrency, maxPages);
     return await crawler.crawl();
 }
