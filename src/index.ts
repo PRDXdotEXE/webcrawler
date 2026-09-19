@@ -1,19 +1,23 @@
-import { argv } from "process";
-import { crawlPage } from "./crawl";
+import { crawlSiteAsync } from "./crawl";
 
 async function main() {
-    const args = argv.slice(2);
-
-    if (args.length !== 1) {
-        console.log("We expect exactly one website URL");
+    if (process.argv.length < 3) {
+        console.log("no website provided");
         process.exit(1);
     }
+    if (process.argv.length > 5) {
+        console.log("too many arguments provided");
+        process.exit(1);
+    }
+    const baseURL = process.argv[2];
+    const maxConcurrency = Number(process.argv[3]);
+    const maxPages = Number(process.argv[4]);
 
-    const url = args[0];
+    console.log(`starting crawl of: ${baseURL}...`);
 
-    console.log(url);
+    const pages = await crawlSiteAsync(baseURL, maxConcurrency, maxPages);
 
-    const result = await crawlPage(url);
+    console.log(pages);
 
     process.exit(0);
 }
